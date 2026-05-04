@@ -1,0 +1,6 @@
+{
+  "name": "WardenGuard CCTV Dashboard",
+  "description": "Professional warden dashboard for monitoring student discipline reports via CCTV feeds. Features real-time sync, incident reporting, and secure access control.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isWarden() {
+      return isSignedIn() && exists(/databases/$(database)/documents/wardens/$(request.auth.uid));
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // Validation helper for Incident Reports
+    function isValidIncidentReport(data) {
+      return data.keys().hasAll(['location', 'timestamp', 'description', 'status', 'videoUrl']) 
+        && data.location is string && data.location.size() <= 200
+        && data.description is string && data.description.size() <= 2000
+        && data.status in ['Sent', 'Reviewed']
+        && data.priority in ['Normal', 'High']
+        && data.videoUrl is string && data.videoUrl.size() <= 1000;
+    }
+
+    match /wardens/{wardenId} {
+      allow read: if isSignedIn() && request.auth.uid == wardenId;
+      // Bootstrapped wardens are added manually or via admin script, not self-registered
+      allow write: if false; 
+    }
+
+    match /incident_reports/{reportId} {
+      // 1. Path Variable Hardening
+      allow get: if isValidId(reportId) && isWarden();
+      
+      // 2. Secure List Queries
+      allow list: if isWarden();
+
+      // 3. Create: Allowed for anyone signed in (students/wardens)
+      allow create: if isVerified() && isValidIncidentReport(incoming()) 
+        && incoming().status == 'Sent'
+        && incoming().keys().size() >= 5;
+
+      // 4. Update: Only for Wardens
+      allow update: if isWarden() && isValidId(reportId) && (
+        // Action: Reviewing a report
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status == 'Reviewed') ||
+        // Action: Flagging for action
+        (incoming().diff(existing()).affectedKeys().hasOnly(['priority']) && incoming().priority == 'High')
+      );
+
+      allow delete: if false; // Reports should be archived, not deleted
+    }
+  }
+}

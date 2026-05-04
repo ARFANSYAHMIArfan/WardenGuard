@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "incident_report": {
+      "title": "Incident Report",
+      "description": "A student discipline report submitted via CCTV monitoring.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "location": { "type": "string", "description": "e.g. Dorm Block A - Corridor Level 2" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["Sent", "Reviewed"] },
+        "priority": { "type": "string", "enum": ["Normal", "High"] },
+        "videoUrl": { "type": "string" },
+        "thumbnailUrl": { "type": "string" },
+        "reporterId": { "type": "string" }
+      },
+      "required": ["location", "timestamp", "description", "status", "videoUrl"]
+    },
+    "warden": {
+      "title": "Warden",
+      "description": "A school official authorized to review incident reports.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "incident_reports": {
+      "schema": "incident_report",
+      "description": "Collection of all student discipline reports."
+    },
+    "wardens": {
+      "schema": "warden",
+      "description": "Whitelist of authorized warden accounts."
+    }
+  }
+}
